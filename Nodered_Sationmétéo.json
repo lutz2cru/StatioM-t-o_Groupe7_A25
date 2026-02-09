@@ -1,0 +1,1691 @@
+[
+    {
+        "id": "flow_meteo_g7",
+        "type": "tab",
+        "label": "Meteo Groupe7",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "mqtt_temp_in",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "Température MQTT",
+        "topic": "meteo/groupe7/temperature",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "fn_temp_process"
+            ]
+        ]
+    },
+    {
+        "id": "fn_temp_process",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Traiter température",
+        "func": "// On suppose que le payload est une valeur simple, par ex \"22.5\" ou 22.5\n// Si tu envoies du JSON (ex : {\"value\":22.5}), dis-le moi et on adaptera.\n\nlet valeur = parseFloat(msg.payload);\n\nif (isNaN(valeur)) {\n    // Si la valeur n'est pas un nombre, on ignore\n    return null;\n}\n\n// Sortie 1 : pour la jauge du dashboard\nlet msgUi = { payload: valeur };\n\n// Sortie 2 : pour l'insertion en base MySQL\nlet msgDb = {\n    topic: \"INSERT INTO temperature (valeur) VALUES (?)\",\n    payload: [valeur]\n};\n\nreturn [msgUi, msgDb];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 100,
+        "wires": [
+            [
+                "ui_gauge_temp",
+                "dbg_temp_ui"
+            ],
+            [
+                "mysql_temp_insert",
+                "dbg_temp_db"
+            ]
+        ]
+    },
+    {
+        "id": "ui_gauge_temp",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "Température",
+        "group": "ebd9fa03ee08d052",
+        "order": 2,
+        "width": "6",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Température (°C)",
+        "label": "°C",
+        "format": "{{value}}",
+        "min": " -10",
+        "max": "35",
+        "colors": [
+            "#00bcd4",
+            "#ffeb3b",
+            "#f44336"
+        ],
+        "seg1": "10",
+        "seg2": "25",
+        "diff": false,
+        "className": "",
+        "x": 650,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "mysql_temp_insert",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "mysql_db_data",
+        "name": "Insert température",
+        "x": 670,
+        "y": 130,
+        "wires": [
+            [
+                "dbg_temp_db_result"
+            ]
+        ]
+    },
+    {
+        "id": "dbg_temp_ui",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "Debug UI temp",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "dbg_temp_db",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "Debug DB temp (requête)",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 690,
+        "y": 170,
+        "wires": []
+    },
+    {
+        "id": "dbg_temp_db_result",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "Debug DB temp (résultat)",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 910,
+        "y": 130,
+        "wires": []
+    },
+    {
+        "id": "inject_temp_test",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Test température locale",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "23",
+        "payloadType": "str",
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "fn_temp_process"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_hum_1",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "Humidité MQTT",
+        "topic": "meteo/groupe7/humidite",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 340,
+        "wires": [
+            [
+                "fn_sql_hum",
+                "ui_hum_gauge",
+                "debug_hum"
+            ]
+        ]
+    },
+    {
+        "id": "fn_sql_hum",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Format SQL humidité",
+        "func": "msg.topic = \"INSERT INTO humidite(valeur) VALUES (?)\";\nmsg.payload = [Number(msg.payload)];\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 340,
+        "wires": [
+            [
+                "mysql_hum"
+            ]
+        ]
+    },
+    {
+        "id": "mysql_hum",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "Insert Humidité",
+        "x": 670,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_hum_gauge",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "Humidité (%)",
+        "group": "ebd9fa03ee08d052",
+        "order": 1,
+        "width": 6,
+        "height": 4,
+        "gtype": "wave",
+        "title": "Humidité",
+        "label": "%",
+        "format": "{{msg.payload}}",
+        "min": 0,
+        "max": 100,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 420,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "inject_test_hum",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Test manuel Humidité",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "payload": "55",
+        "payloadType": "num",
+        "x": 160,
+        "y": 400,
+        "wires": [
+            [
+                "fn_sql_hum",
+                "ui_hum_gauge"
+            ]
+        ]
+    },
+    {
+        "id": "debug_hum",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "Debug Humidité",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 410,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "bc78a913b8b8d79f",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Format SQL pression",
+        "func": "const valeur = Number(msg.payload);\nif (isNaN(valeur)) {\n    return null;\n}\nmsg.topic = \"INSERT INTO pression(valeur) VALUES (?)\";\nmsg.payload = [valeur];\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 540,
+        "wires": [
+            [
+                "9e767807bc81d3fe",
+                "92248b89a03222c7"
+            ]
+        ]
+    },
+    {
+        "id": "9e767807bc81d3fe",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "Insert Pression",
+        "x": 650,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "399bfac7fc5241d6",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Test manuel Pression",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "once": false,
+        "payload": "1013",
+        "payloadType": "num",
+        "x": 150,
+        "y": 600,
+        "wires": [
+            [
+                "bc78a913b8b8d79f"
+            ]
+        ]
+    },
+    {
+        "id": "cc388c0ae97e5bb5",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "Debug Pression",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 400,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "c7f7b83fe451f53a",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "Pression MQTT",
+        "topic": "meteo/groupe7/pression",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 540,
+        "wires": [
+            [
+                "bc78a913b8b8d79f",
+                "cc388c0ae97e5bb5"
+            ]
+        ]
+    },
+    {
+        "id": "vent_mqtt_in",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "Vent (Fréquence Hz)",
+        "topic": "meteo/groupe7/vent/freq",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 110,
+        "y": 900,
+        "wires": [
+            [
+                "vent_convert"
+            ]
+        ]
+    },
+    {
+        "id": "vent_convert",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Conversion Hz → m/s → km/h",
+        "func": "// Lecture de la fréquence envoyée\nlet freq = parseFloat(msg.payload);\nif (isNaN(freq)) return null;\n\n// Modèle d'anémomètre (modifiable)\nlet distanceParTour = 0.5; // en m (exemple)\n\n// Calculs\nlet kmh = freq * 3.6;\n\nmsg.payload = {\n    freq: freq,\n    ms: Number(kmh.toFixed(2)),\n    kmh: Number(kmh.toFixed(2))\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 900,
+        "wires": [
+            [
+                "vent_insert_db",
+                "vent_gauge"
+            ]
+        ]
+    },
+    {
+        "id": "vent_insert_db",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Prepare INSERT SQL",
+        "func": "msg.topic = \"INSERT INTO vent (valeur) VALUES (?)\";\nmsg.payload = [msg.payload.kmh];\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 870,
+        "wires": [
+            [
+                "e48ec2510b0c8401"
+            ]
+        ]
+    },
+    {
+        "id": "vent_gauge",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "Vitesse du vent",
+        "group": "ebd9fa03ee08d052",
+        "order": 3,
+        "width": "6",
+        "height": 4,
+        "gtype": "gage",
+        "title": "Vent (km/h)",
+        "label": "km/h",
+        "format": "{{msg.payload.kmh}}",
+        "min": 0,
+        "max": "40",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 640,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "vent_simulate",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Simulation vent (Hz)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "12",
+        "payloadType": "str",
+        "x": 110,
+        "y": 960,
+        "wires": [
+            [
+                "vent_convert"
+            ]
+        ]
+    },
+    {
+        "id": "btn_buzzer_on",
+        "type": "ui_button",
+        "z": "flow_meteo_g7",
+        "name": "Buzzer ON",
+        "group": "6fbc70277e5dc80a",
+        "order": 1,
+        "width": 4,
+        "height": 1,
+        "passthru": false,
+        "label": "🔊 Activer le buzzer",
+        "tooltip": "",
+        "color": "white",
+        "bgcolor": "#d9534f",
+        "className": "",
+        "icon": "",
+        "payload": "ON",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "x": 370,
+        "y": 1480,
+        "wires": [
+            [
+                "buzzer_prepare"
+            ]
+        ]
+    },
+    {
+        "id": "btn_buzzer_off",
+        "type": "ui_button",
+        "z": "flow_meteo_g7",
+        "name": "Buzzer OFF",
+        "group": "6fbc70277e5dc80a",
+        "order": 2,
+        "width": 4,
+        "height": 1,
+        "passthru": false,
+        "label": "🔇 Éteindre le buzzer",
+        "tooltip": "",
+        "color": "white",
+        "bgcolor": "#5bc0de",
+        "className": "",
+        "icon": "",
+        "payload": "OFF",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "x": 380,
+        "y": 1530,
+        "wires": [
+            [
+                "buzzer_prepare"
+            ]
+        ]
+    },
+    {
+        "id": "buzzer_prepare",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Préparer MQTT + SQL",
+        "func": "let etat = msg.payload;\n\n// 1. Définir topic MQTT\nmsg.topic = \"meteo/groupe7/cmd/buzzer\";\nmsg.command = etat;\n\n// 2. Préparer enregistrement SQL\nmsg.sql = {\n    topic: \"INSERT INTO journal_actions (action, valeur) VALUES (?, ?)\",\n    params: [\"buzzer\", etat]\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 1505,
+        "wires": [
+            [
+                "buzzer_mqtt",
+                "buzzer_sql"
+            ]
+        ]
+    },
+    {
+        "id": "buzzer_mqtt",
+        "type": "mqtt out",
+        "z": "flow_meteo_g7",
+        "name": "MQTT → ESP32 Buzzer",
+        "topic": "meteo/groupe7/cmd/buzzer",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_utbm",
+        "x": 950,
+        "y": 1480,
+        "wires": []
+    },
+    {
+        "id": "buzzer_sql",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Créer requête SQL",
+        "func": "msg.topic = msg.sql.topic;\nmsg.payload = msg.sql.params;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 950,
+        "y": 1530,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "buzzer_sim",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Simulation Buzzer OFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "OFF",
+        "payloadType": "str",
+        "x": 390,
+        "y": 1580,
+        "wires": [
+            [
+                "buzzer_prepare"
+            ]
+        ]
+    },
+    {
+        "id": "oled_store_mode",
+        "type": "change",
+        "z": "flow_meteo_g7",
+        "name": "Stocker mode OLED",
+        "rules": [
+            {
+                "t": "set",
+                "p": "oled_mode",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "x": 830,
+        "y": 1680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "oled_custom_prepare",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Créer commande texte OLED",
+        "func": "let mode = flow.get('oled_mode');\nif (mode !== 'custom') return null;\n\nlet txt = msg.payload;\nif (!txt || txt.length === 0) return null;\n\nmsg.topic = \"meteo/groupe7/cmd/oled\";\nmsg.payload = { mode: 'custom', text: txt };\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 880,
+        "y": 1740,
+        "wires": [
+            [
+                "oled_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "oled_auto_trigger",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Forcer affichage auto",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "payload": "",
+        "payloadType": "date",
+        "x": 570,
+        "y": 1800,
+        "wires": [
+            [
+                "oled_auto_prepare"
+            ]
+        ]
+    },
+    {
+        "id": "oled_auto_prepare",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Préparer données auto",
+        "func": "let mode = flow.get('oled_mode');\nif (mode !== 'auto') return null;\n\n// Récupération des dernières valeurs connues\nlet T = flow.get('last_temp');\nlet H = flow.get('last_hum');\nlet P = flow.get('last_press');\nlet L = flow.get('last_lux');\nlet C = flow.get('last_co2');\n\nmsg.topic = \"meteo/groupe7/cmd/oled\";\nmsg.payload = {\n    mode: 'auto',\n    temp: T,\n    hum: H,\n    press: P,\n    lux: L,\n    co2: C\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 860,
+        "y": 1800,
+        "wires": [
+            [
+                "oled_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "oled_mqtt",
+        "type": "mqtt out",
+        "z": "flow_meteo_g7",
+        "name": "MQTT → ESP32 OLED",
+        "topic": "meteo/groupe7/cmd/led",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_utbm",
+        "x": 1160,
+        "y": 1740,
+        "wires": []
+    },
+    {
+        "id": "92248b89a03222c7",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "Pression (hPa)",
+        "group": "ebd9fa03ee08d052",
+        "order": 6,
+        "width": 6,
+        "height": 4,
+        "gtype": "compass",
+        "title": "Pression atmosphérique",
+        "label": "hPa",
+        "format": "{{value}}",
+        "min": 950,
+        "max": 1050,
+        "colors": [
+            "#0d47a1",
+            "#29b6f6",
+            "#81d4fa"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 580,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "42c0be2a91500ed4",
+        "type": "ui_template",
+        "z": "flow_meteo_g7",
+        "group": "",
+        "name": "",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "format": "<style>\n    :root {\n        --card-bg: #ffffff;\n        --card-radius: 12px;\n        --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);\n        --spacing: 20px;\n    }\n\n    /* Chaque groupe Dashboard devient une carte */\n    .nr-dashboard-cardpanel,\n    .md-card {\n        background: var(--card-bg) !important;\n        border-radius: var(--card-radius) !important;\n        box-shadow: var(--card-shadow) !important;\n        padding: 15px !important;\n        margin: var(--spacing) !important;\n    }\n\n    /* Le fond du dashboard */\n    md-content {\n        background: #eef1f5 !important;\n    }\n\n    /* Titres des groupes */\n    md-card h3 {\n        font-size: 20px !important;\n        font-weight: 600 !important;\n        color: #0078ff !important;\n        margin-bottom: 10px !important;\n    }\n</style>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "global",
+        "className": "",
+        "x": 300,
+        "y": 2220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "inj_co2_test",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Simuler CO₂",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "800",
+        "payloadType": "num",
+        "x": 150,
+        "y": 1060,
+        "wires": [
+            [
+                "fmt_co2",
+                "sql_co2"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_co2",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "MQTT CO₂",
+        "topic": "meteo/groupe7/co2",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 140,
+        "y": 1110,
+        "wires": [
+            [
+                "fmt_co2",
+                "sql_co2"
+            ]
+        ]
+    },
+    {
+        "id": "fmt_co2",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Format CO₂",
+        "func": "msg.payload = Number(msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "x": 390,
+        "y": 1080,
+        "wires": [
+            [
+                "gauge_co2"
+            ]
+        ]
+    },
+    {
+        "id": "gauge_co2",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "CO₂",
+        "group": "ebd9fa03ee08d052",
+        "order": 1,
+        "width": "6",
+        "height": 4,
+        "gtype": "donut",
+        "title": "",
+        "label": "CO₂ (ppm)",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "3500",
+        "colors": [
+            "#00bfff",
+            "#0080ff",
+            "#0040ff"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 640,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "sql_co2",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "INSERT CO₂ → MySQL",
+        "func": "msg.topic = `INSERT INTO co2 (valeur) VALUES (${Number(msg.payload)})`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1140,
+        "wires": [
+            [
+                "201acae5bd6b24c2"
+            ]
+        ]
+    },
+    {
+        "id": "inj_tvoc_test",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Simuler TVOC",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "150",
+        "payloadType": "num",
+        "x": 150,
+        "y": 1180,
+        "wires": [
+            [
+                "fmt_tvoc",
+                "sql_tvoc"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_tvoc",
+        "type": "mqtt in",
+        "z": "flow_meteo_g7",
+        "name": "MQTT TVOC",
+        "topic": "meteo/groupe7/tvoc",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "broker_utbm",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 140,
+        "y": 1230,
+        "wires": [
+            [
+                "fmt_tvoc",
+                "sql_tvoc"
+            ]
+        ]
+    },
+    {
+        "id": "fmt_tvoc",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Format TVOC",
+        "func": "msg.payload = Number(msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "x": 390,
+        "y": 1200,
+        "wires": [
+            [
+                "gauge_tvoc"
+            ]
+        ]
+    },
+    {
+        "id": "gauge_tvoc",
+        "type": "ui_gauge",
+        "z": "flow_meteo_g7",
+        "name": "TVOC",
+        "group": "ebd9fa03ee08d052",
+        "order": 2,
+        "width": "6",
+        "height": 4,
+        "gtype": "compass",
+        "title": "",
+        "label": "TVOC (ppb)",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 1500,
+        "colors": [
+            "#ffe600",
+            "#ffbf00",
+            "#ff8000"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 640,
+        "y": 1200,
+        "wires": []
+    },
+    {
+        "id": "sql_tvoc",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "INSERT TVOC → MySQL",
+        "func": "msg.topic = `INSERT INTO tvoc (valeur) VALUES (${Number(msg.payload)})`;\nreturn msg;",
+        "outputs": 1,
+        "x": 390,
+        "y": 1260,
+        "wires": [
+            [
+                "8c12a2dff25ca2be"
+            ]
+        ]
+    },
+    {
+        "id": "inj_temp_7j",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Charger historique température (7 jours)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 620,
+        "y": 1940,
+        "wires": [
+            [
+                "fn_sql_temp_7j"
+            ]
+        ]
+    },
+    {
+        "id": "fn_sql_temp_7j",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "SQL (température sur 7 jours)",
+        "func": "msg.topic = `\nSELECT UNIX_TIMESTAMP(date)*1000 AS ts, valeur\nFROM temperature\nWHERE date >= NOW() - INTERVAL 7 DAY\nORDER BY date ASC;\n`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 1940,
+        "wires": [
+            [
+                "mysql_temp_7j"
+            ]
+        ]
+    },
+    {
+        "id": "mysql_temp_7j",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "MySQL (data)",
+        "x": 1140,
+        "y": 1940,
+        "wires": [
+            [
+                "dbg_rows_temp_7j",
+                "fn_to_chart_temp_7j"
+            ]
+        ]
+    },
+    {
+        "id": "dbg_rows_temp_7j",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "DEBUG rows MySQL (temp)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1380,
+        "y": 1900,
+        "wires": []
+    },
+    {
+        "id": "fn_to_chart_temp_7j",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Convertir MySQL → ui_chart (timestamp)",
+        "func": "const rows = msg.payload;\nif (!Array.isArray(rows) || rows.length === 0) return null;\n\nconst out = [];\n\nfor (const r of rows) {\n  const value = Number(r.valeur ?? r.value);\n  const ts =\n    Number(r.ts) ||\n    (r.date ? new Date(String(r.date).replace(\" \", \"T\")).getTime() : NaN);\n\n  if (!Number.isFinite(value) || !Number.isFinite(ts)) {\n    node.warn(\"Ligne ignorée: \" + JSON.stringify(r));\n    continue;\n  }\n\n  out.push({\n    topic: \"Température (°C)\",\n    payload: value,\n    timestamp: ts\n  });\n}\n\nif (out.length === 0) return null;\n\n// Envoie plusieurs messages d’un coup (un point par message)\nreturn [out];\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1410,
+        "y": 1960,
+        "wires": [
+            [
+                "chart_temp_7j",
+                "dbg_points_temp_7j"
+            ]
+        ]
+    },
+    {
+        "id": "dbg_points_temp_7j",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "DEBUG points chart (temp)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 1680,
+        "y": 2000,
+        "wires": []
+    },
+    {
+        "id": "chart_temp_7j",
+        "type": "ui_chart",
+        "z": "flow_meteo_g7",
+        "name": "Historique Température",
+        "group": "ui_group_hist_g7",
+        "order": 1,
+        "width": 18,
+        "height": 7,
+        "label": "Historique Température",
+        "chartType": "line",
+        "legend": true,
+        "xformat": "dd/MM HH:mm",
+        "interpolate": "linear",
+        "nodata": "Aucune donnée",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "7",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1730,
+        "y": 1900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "201acae5bd6b24c2",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "Insert Pression",
+        "x": 640,
+        "y": 1140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8c12a2dff25ca2be",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "Insert Pression",
+        "x": 640,
+        "y": 1260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e48ec2510b0c8401",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "Insert Pression",
+        "x": 920,
+        "y": 880,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d3968a66f326eb2b",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Charger historique température (7 jours)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 560,
+        "y": 2100,
+        "wires": [
+            [
+                "96b8081173cd8840"
+            ]
+        ]
+    },
+    {
+        "id": "96b8081173cd8840",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "SQL",
+        "func": "msg.topic = `\nSELECT UNIX_TIMESTAMP(date)*1000 AS ts, valeur\nFROM humidite\nWHERE date >= NOW() - INTERVAL 7 DAY\nORDER BY date ASC;\n`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 2100,
+        "wires": [
+            [
+                "513f0a4c43360414"
+            ]
+        ]
+    },
+    {
+        "id": "513f0a4c43360414",
+        "type": "mysql",
+        "z": "flow_meteo_g7",
+        "mydb": "db_mysql",
+        "name": "MySQL (data)",
+        "x": 1080,
+        "y": 2100,
+        "wires": [
+            [
+                "cb0e5a2fdfd45e5f",
+                "9d78e1b1217cacd8"
+            ]
+        ]
+    },
+    {
+        "id": "cb0e5a2fdfd45e5f",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "DEBUG rows MySQL (temp)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1320,
+        "y": 2060,
+        "wires": []
+    },
+    {
+        "id": "9d78e1b1217cacd8",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Convertir MySQL → ui_chart (timestamp)",
+        "func": "const rows = msg.payload;\nif (!Array.isArray(rows) || rows.length === 0) return null;\n\nconst out = [];\n\nfor (const r of rows) {\n  const value = Number(r.valeur ?? r.value);\n  const ts =\n    Number(r.ts) ||\n    (r.date ? new Date(String(r.date).replace(\" \", \"T\")).getTime() : NaN);\n\n  if (!Number.isFinite(value) || !Number.isFinite(ts)) {\n    node.warn(\"Ligne ignorée: \" + JSON.stringify(r));\n    continue;\n  }\n\n  out.push({\n    topic: \"Humidité (%)\",\n    payload: value,\n    timestamp: ts\n  });\n}\n\nif (out.length === 0) return null;\n\n// Envoie plusieurs messages d’un coup (un point par message)\nreturn [out];\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1350,
+        "y": 2120,
+        "wires": [
+            [
+                "560988378754584e",
+                "e552e0956e6bac84"
+            ]
+        ]
+    },
+    {
+        "id": "e552e0956e6bac84",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "DEBUG points chart (temp)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 1620,
+        "y": 2160,
+        "wires": []
+    },
+    {
+        "id": "560988378754584e",
+        "type": "ui_chart",
+        "z": "flow_meteo_g7",
+        "name": "Historique Humidité",
+        "group": "ui_group_hist_g7",
+        "order": 1,
+        "width": 18,
+        "height": 7,
+        "label": "Historique Humidité",
+        "chartType": "line",
+        "legend": true,
+        "xformat": "dd/MM HH:mm",
+        "interpolate": "linear",
+        "nodata": "Aucune donnée",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "7",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "86400",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1650,
+        "y": 2060,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9194c6e99b564094",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Préparer MQTT + SQL",
+        "func": "let etat = msg.payload;\n\n// 1. Définir topic MQTT\nmsg.topic = \"meteo/groupe7/cmd/buzzer\";\nmsg.command = etat;\n\n// 2. Préparer enregistrement SQL\nmsg.sql = {\n    topic: \"INSERT INTO journal_actions (action, valeur) VALUES (?, ?)\",\n    params: [\"buzzer\", etat]\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 2440,
+        "wires": [
+            [
+                "1ccd122f25a89b98",
+                "b228fd43fff1c8e1"
+            ]
+        ]
+    },
+    {
+        "id": "51fc7f23f92c6530",
+        "type": "ui_button",
+        "z": "flow_meteo_g7",
+        "name": "Buzzer STOP",
+        "group": "6fbc70277e5dc80a",
+        "order": 3,
+        "width": 4,
+        "height": 1,
+        "passthru": false,
+        "label": "❌ Ignorer l'alarme",
+        "tooltip": "",
+        "color": "white",
+        "bgcolor": "#ff7f00",
+        "className": "",
+        "icon": "",
+        "payload": "STOP",
+        "payloadType": "str",
+        "topic": "",
+        "topicType": "str",
+        "x": 500,
+        "y": 2415,
+        "wires": [
+            [
+                "9194c6e99b564094"
+            ]
+        ]
+    },
+    {
+        "id": "42f954f4f259f1af",
+        "type": "inject",
+        "z": "flow_meteo_g7",
+        "name": "Simulation Buzzer OFF",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "OFF",
+        "payloadType": "str",
+        "x": 510,
+        "y": 2515,
+        "wires": [
+            [
+                "9194c6e99b564094"
+            ]
+        ]
+    },
+    {
+        "id": "1ccd122f25a89b98",
+        "type": "mqtt out",
+        "z": "flow_meteo_g7",
+        "name": "MQTT → ESP32 Buzzer",
+        "topic": "meteo/groupe7/cmd/buzzer",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "broker_utbm",
+        "x": 1070,
+        "y": 2415,
+        "wires": []
+    },
+    {
+        "id": "b228fd43fff1c8e1",
+        "type": "function",
+        "z": "flow_meteo_g7",
+        "name": "Créer requête SQL",
+        "func": "msg.topic = msg.sql.topic;\nmsg.payload = msg.sql.params;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 2465,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b1a2c3d4e5f6a001",
+        "type": "ui_dropdown",
+        "z": "flow_meteo_g7",
+        "name": "Sélecteur LED",
+        "label": "Bande LED :",
+        "tooltip": "Choisir le capteur affiché sur la bande LED",
+        "place": "Choisir un capteur",
+        "group": "6fbc70277e5dc80a",
+        "order": 4,
+        "width": 6,
+        "height": 1,
+        "passthru": true,
+        "multiple": false,
+        "options": [
+            {
+                "label": "Température",
+                "value": "temperature",
+                "type": "str"
+            },
+            {
+                "label": "Humidité",
+                "value": "humidite",
+                "type": "str"
+            },
+            {
+                "label": "Pression",
+                "value": "pression",
+                "type": "str"
+            },
+            {
+                "label": "Vent",
+                "value": "vent",
+                "type": "str"
+            },
+            {
+                "label": "CO2",
+                "value": "co2",
+                "type": "str"
+            },
+            {
+                "label": "TVOC",
+                "value": "tvoc",
+                "type": "str"
+            },
+            {
+                "label": "Éteindre",
+                "value": "off",
+                "type": "str"
+            }
+        ],
+        "payload": "",
+        "topic": "",
+        "topicType": "str",
+        "className": "",
+        "x": 560,
+        "y": 1380,
+        "wires": [
+            [
+                "mqtt_led_mode",
+                "f76e68c0831d9df7"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_led_mode",
+        "type": "mqtt out",
+        "z": "flow_meteo_g7",
+        "name": "MQTT LED Mode",
+        "topic": "meteo/groupe7/led/mode",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_utbm",
+        "x": 820,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "f76e68c0831d9df7",
+        "type": "debug",
+        "z": "flow_meteo_g7",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 820,
+        "y": 1320,
+        "wires": []
+    },
+    {
+        "id": "fe402594e074e3da",
+        "type": "ui_spacer",
+        "z": "flow_meteo_g7",
+        "name": "spacer",
+        "group": "",
+        "order": 1,
+        "width": 1,
+        "height": 1
+    },
+    {
+        "id": "broker_utbm",
+        "type": "mqtt-broker",
+        "name": "Broker UTBM",
+        "broker": "mqtt.ci-ciad.utbm.fr",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": ""
+    },
+    {
+        "id": "ebd9fa03ee08d052",
+        "type": "ui_group",
+        "name": "Capteurs",
+        "tab": "ui_tab_meteo",
+        "order": 1,
+        "disp": true,
+        "width": "20",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "mysql_db_data",
+        "type": "MySQLdatabase",
+        "name": "DB data",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "db": "data",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "db_mysql",
+        "type": "MySQLdatabase",
+        "name": "data",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "db": "data",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "6fbc70277e5dc80a",
+        "type": "ui_group",
+        "name": "Actionneurs",
+        "tab": "ui_tab_meteo",
+        "order": 2,
+        "disp": true,
+        "width": "20",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "ui_group_hist_g7",
+        "type": "ui_group",
+        "name": "Graphiques",
+        "tab": "ui_tab_meteo",
+        "order": 3,
+        "disp": false,
+        "width": 20,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "mqtt_utbm",
+        "type": "mqtt-broker",
+        "name": "MQTT UTBM",
+        "broker": "mqtt.ci-ciad.utbm.fr",
+        "port": "1883",
+        "clientid": "node-red-groupe7",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+    {
+        "id": "ui_tab_meteo",
+        "type": "ui_tab",
+        "name": "Station météo",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "440a0ba0fd1b48a6",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6",
+            "node-red-node-mysql": "2.0.0"
+        }
+    }
+]
